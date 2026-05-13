@@ -11,15 +11,16 @@ class Satellite extends Model
 
     protected $fillable = [
         'name',
+        'norad_id', 
         'country',
         'launch_date',
         'orbit_type',
-        'tle_line1', // Ubah ini
-        'tle_line2', // Ubah ini
+        'tle_line1',
+        'tle_line2',
         'status',
         'description',
-        'image',
-        'ground_station_id'
+        'ground_station_id',
+        'image'
     ];
 
     protected $casts = [

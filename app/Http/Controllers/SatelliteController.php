@@ -55,6 +55,7 @@ class SatelliteController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'norad_id' => 'nullable|string|max:50', // HARUS ADA INI
             'country' => 'required|string|max:255',
             'launch_date' => 'required|date',
             'orbit_type' => 'required|in:LEO,MEO,GEO',
@@ -65,7 +66,6 @@ class SatelliteController extends Controller
             'ground_station_id' => 'nullable|exists:ground_stations,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
-
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('satellites', 'public');
         }
@@ -91,6 +91,7 @@ class SatelliteController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'norad_id' => 'nullable|string|max:50',
             'country' => 'required|string|max:255',
             'launch_date' => 'required|date',
             'orbit_type' => 'required|in:LEO,MEO,GEO',
@@ -141,26 +142,45 @@ class SatelliteController extends Controller
     // Fungsi Baru: Menarik data TLE terbaru khusus untuk satu satelit
     public function syncSingleTLE(Satellite $satellite)
     {
-        // URL Endpoint TLE dari server lokal BRIN
-        $url = 'http://10.35.0.104/tle/LAPANSAT-TLE.txt';
+        $url = '';
+        $isGlobal = false;
+
+        // Tentukan Strategi Pengambilan Data
+        if (!empty($satellite->norad_id)) {
+            // Prioritas 1: Jika ada NORAD ID, tembak ke CelesTrak (Global API)
+            $url = "https://celestrak.org/NORAD/elements/gp.php?CATNR={$satellite->norad_id}&FORMAT=tle";
+            $isGlobal = true;
+        } else {
+            // Prioritas 2: Jika kosong, gunakan IP Lokal BRIN
+            $url = 'http://10.35.0.104/tle/LAPANSAT-TLE.txt';
+        }
 
         try {
-            $response = Http::timeout(10)->get($url);
+            $response = Http::timeout(15)->get($url);
 
             if ($response->successful()) {
+                // Pecah teks berdasarkan baris baru
                 $lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $response->body())));
                 $lines = array_values($lines);
 
+                // Cek apakah API CelesTrak mengembalikan error string seperti "No TLE found"
+                if (count($lines) > 0 && stripos($lines[0], 'No TLE found') !== false) {
+                    return redirect()->back()->with('error', 'NORAD ID tidak ditemukan di database global CelesTrak.');
+                }
+
                 $isUpdated = false;
 
+                // Looping 3 baris TLE
                 for ($i = 0; $i < count($lines); $i += 3) {
                     if (isset($lines[$i + 2])) {
                         $nameFromTxt = trim($lines[$i]);
                         $tle1 = trim($lines[$i + 1]);
                         $tle2 = trim($lines[$i + 2]);
 
-                        // Cek apakah nama di txt cocok dengan nama satelit
-                        if (stripos($nameFromTxt, $satellite->name) !== false || stripos($satellite->name, $nameFromTxt) !== false) {
+                        // Pencocokan: 
+                        // Jika dari CelesTrak (isGlobal), asumsikan data sudah pasti milik ID tersebut
+                        // Jika dari BRIN, cocokkan berdasarkan Nama
+                        if ($isGlobal || stripos($nameFromTxt, $satellite->name) !== false || stripos($satellite->name, $nameFromTxt) !== false) {
                             
                             $satellite->update([
                                 'tle_line1' => $tle1,
@@ -168,22 +188,23 @@ class SatelliteController extends Controller
                             ]);
                             
                             $isUpdated = true;
-                            break; 
+                            break; // Stop pencarian setelah sukses
                         }
                     }
                 }
 
                 if ($isUpdated) {
-                    return redirect()->back()->with('success', "Data TLE untuk {$satellite->name} berhasil diperbarui!");
+                    $sumber = $isGlobal ? 'CelesTrak (Global)' : 'Server LAPAN (Lokal)';
+                    return redirect()->back()->with('success', "Data TLE untuk {$satellite->name} berhasil diperbarui dari {$sumber}.");
                 } else {
-                    return redirect()->back()->with('warning', "Nama {$satellite->name} tidak ditemukan di server TLE BRIN.");
+                    return redirect()->back()->with('warning', "Data ditemukan tetapi namanya tidak cocok dengan sistem.");
                 }
             }
 
-            return redirect()->back()->with('error', 'Gagal menghubungi server TLE.');
+            return redirect()->back()->with('error', 'Gagal menghubungi server penyedia TLE.');
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Koneksi ke server TLE gagal: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Koneksi ke server gagal: ' . $e->getMessage());
         }
     }
 }

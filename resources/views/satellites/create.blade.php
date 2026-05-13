@@ -23,8 +23,23 @@
                         <div class="form-group">
                             <label for="name">Satellite Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" name="name" value="{{ old('name') }}" required placeholder="e.g., LAPAN-A2">
+                                   id="name" name="name" value="{{ old('name') }}" required placeholder="e.g., Satellite ">
                             @error('name') <span class="invalid-feedback">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-group">
+                            <label for="norad_id">NORAD ID <small class="text-muted">(Opsional untuk Global Sync)</small></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control @error('norad_id') is-invalid @enderror" 
+                                       id="norad_id" name="norad_id" value="{{ old('norad_id') }}" placeholder="Contoh: 25544 untuk ISS">
+                                <div class="input-group-append">
+                                    <a href="https://celestrak.org/satcat/search.php" target="_blank" class="btn btn-outline-secondary" title="Cari ID Satelit di CelesTrak">
+                                        <i class="fas fa-search"></i> Cari ID
+                                    </a>
+                                </div>
+                            </div>
+                            @error('norad_id') <span class="invalid-feedback">{{ $message }}</span> @enderror
+                            <small class="text-muted">Isi ID ini untuk update otomatis dari CelesTrak. Kosongkan jika menggunakan server lokal BRIN.</small>
                         </div>
 
                         <div class="form-group">
