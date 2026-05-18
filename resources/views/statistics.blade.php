@@ -187,7 +187,7 @@
         </div>
 
         <div class="col-md-6">
-            <div class="card" style="min-height: 318px;">
+            <div class="card" style="min-height: 300px;">
                 <div class="card-header">
                     <h3 class="card-title">Satellites by Orbit Type (Detailed)</h3>
                 </div>

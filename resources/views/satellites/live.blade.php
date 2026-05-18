@@ -54,7 +54,7 @@
 
     <div class="row" id="stat-cards-container">
         @foreach($satellites as $sat)
-        <div class="col-md-4 col-sm-6 stat-card-wrapper" id="wrapper-{{ $sat->id }}" style="display: none;">
+        <div class="col-md-4 col-sm-6 stat-card-wrapper" id="wrapper-{{ $sat->id }}">
             <div class="card shadow-sm border-0 mb-3 sat-card-clickable" id="card-{{ $sat->id }}" style="border-top: 4px solid #333;" onclick="focusSatellite({{ $sat->id }})" title="Klik untuk mencari satelit di peta">
                 <div class="card-body p-3">
                     <h6 class="font-weight-bold mb-2"><i class="fas fa-satellite mr-1"></i> {{ $sat->name }}</h6>
@@ -87,13 +87,13 @@
                     </button>
                     <div class="dropdown-menu dropdown-menu-right p-3 dropdown-menu-filter" aria-labelledby="filterDropdown" style="width: 280px;" onclick="event.stopPropagation()">
                         <div class="custom-control custom-checkbox mb-3 pb-2 border-bottom">
-                            <input class="custom-control-input" type="checkbox" id="checkAll">
+                            <input class="custom-control-input" type="checkbox" id="checkAll" checked>
                             <label for="checkAll" class="custom-control-label font-weight-bold">Tampilkan Semua</label>
                         </div>
                         <div id="satellite-checkboxes">
                             @foreach($satellites as $sat)
                             <div class="custom-control custom-switch mb-2">
-                                <input type="checkbox" class="custom-control-input sat-checkbox" id="chk-{{ $sat->id }}" value="{{ $sat->id }}">
+                                <input type="checkbox" class="custom-control-input sat-checkbox" id="chk-{{ $sat->id }}" value="{{ $sat->id }}" checked>
                                 <label class="custom-control-label" style="cursor: pointer;" for="chk-{{ $sat->id }}">
                                     {{ $sat->name }}
                                 </label>
@@ -171,10 +171,10 @@
                     iconSize: [0, 0], iconAnchor: [0, 0]
                 });
 
-                // PERUBAHAN: Menghapus .addTo(map) di sini agar peta bersih di awal
+                // PERUBAHAN 4: Memastikan .addTo(map) dipasang agar marker dan garis langsung tergambar
                 trackers[sat.id] = {
-                    marker: L.marker([0, 0], {icon: customIcon}), 
-                    line: L.polyline([], {color: color, weight: 2, opacity: 0.6}),
+                    marker: L.marker([0, 0], {icon: customIcon}).addTo(map), 
+                    line: L.polyline([], {color: color, weight: 2, opacity: 0.6}).addTo(map),
                     satrec: satellite.twoline2satrec(sat.tle_line1, sat.tle_line2)
                 };
             });

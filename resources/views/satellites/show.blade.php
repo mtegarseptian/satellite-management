@@ -12,8 +12,7 @@
 @push('styles')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Background biru sangat gelap untuk ruang kosong saat zoom out */
-        #satelliteMap { height: 714px; width: 100%; z-index: 1; border-radius: 4px; background: #0b101d; }
+        #satelliteMap { width: 100%; z-index: 1; border-radius: 0 0 4px 4px; background: #0b101d; }
 
         /* Mencegah konflik CSS gambar AdminLTE */
         .leaflet-container img {
@@ -78,13 +77,13 @@
                     @else
                         <div class="text-muted">
                             <i class="fas fa-satellite fa-5x"></i>
-                            <p class="mt-3">No image available</p>
+                            <p class="mt-3 mb-0">No image available</p>
                         </div>
                     @endif
                 </div>
             </div>
 
-            <div class="card shadow-sm">
+            <div class="card shadow-sm flex-grow-1 mb-3">
                 <div class="card-header">
                     <h3 class="card-title">Information</h3>
                     <div class="card-tools">
@@ -126,7 +125,7 @@
             </div>
         </div>
 
-        <div class="col-md-8">
+        <div class="col-md-8 d-flex flex-column">
             <div class="row">
                 <div class="col-md-4 col-sm-6 col-12">
                     <div class="info-box shadow-sm">
@@ -157,7 +156,7 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm">
+            <div class="card shadow-sm flex-grow-1 d-flex flex-column mb-3">
                 <div class="card-header bg-dark">
                     <h3 class="card-title mt-1"><i class="fas fa-map-marked-alt text-warning mr-2"></i> Live Orbit Tracker</h3>
                     <div class="card-tools">
@@ -166,8 +165,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="card-body p-0">
-                    <div id="satelliteMap"></div>
+                <div class="card-body p-0 d-flex flex-column flex-grow-1">
+                    <div id="satelliteMap" class="flex-grow-1" style="min-height: 400px;"></div>
                 </div>
             </div>
         </div>
@@ -183,7 +182,6 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             
-            // 1. Konfigurasi Map (Full & Seamless)
             var bounds = [[-90, -Infinity], [90, Infinity]];
             map = L.map('satelliteMap', {
                 minZoom: 1.5,
@@ -202,7 +200,6 @@
                 maxZoom: 18
             }).addTo(map);
 
-            // 2. Persiapan Data Satelit
             var satName = "{{ $satellite->name }}";
             var tle1 = "{{ $satellite->tle_line1 }}";
             var tle2 = "{{ $satellite->tle_line2 }}";
@@ -222,8 +219,6 @@
             var orbitLine = L.polyline([], {color: '#ff3333', weight: 2, opacity: 0.8}).addTo(map);
 
             let isFirstLoad = true;
-
-            // Inisialisasi Record Satelit SGP4
             var satrec = satellite.twoline2satrec(tle1, tle2);
 
             function updateLiveTelemetry() {
@@ -247,12 +242,10 @@
                     const newLatLng = new L.LatLng(lat, lng);
                     satMarker.setLatLng(newLatLng);
                     
-                    // --- HITUNG GARIS ORBIT UTUH (Masa Lalu & Masa Depan) ---
                     let pathSegments = [];
                     let currentSegment = [];
                     let lastLng = null;
 
-                    // Loop mundur 45 menit sampai maju 45 menit (total 90 menit)
                     for (let i = -45; i <= 45; i += 1) {
                         let calcTime = new Date(now.getTime() + i * 60000);
                         let calcPV = satellite.propagate(satrec, calcTime);
@@ -262,7 +255,6 @@
                             let pLat = satellite.degreesLat(calcGd.latitude);
                             let pLng = satellite.degreesLong(calcGd.longitude);
 
-                            // Anti-Meridian Bug Fix: Jika lompatan > 180 derajat, putus garisnya
                             if (lastLng !== null && Math.abs(pLng - lastLng) > 180) {
                                 pathSegments.push(currentSegment);
                                 currentSegment = [];
@@ -284,9 +276,15 @@
             }
 
             updateLiveTelemetry();
-            setInterval(updateLiveTelemetry, 1000); // Perbarui setiap detik
+            setInterval(updateLiveTelemetry, 1000); 
             
+            // Perbarui ukuran peta setelah struktur flexbox selesai dimuat
             setTimeout(function() { map.invalidateSize(); }, 500);
+            
+            // Tambahan: Pastikan peta me-resize ulang jika ukuran jendela berubah
+            window.addEventListener('resize', function() {
+                map.invalidateSize();
+            });
         });
 
         function recenterMap() {

@@ -26,6 +26,7 @@ class GroundStationController extends Controller
             'country' => 'required|string|max:255',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
+            'altitude' => 'nullable|numeric',
             'description' => 'nullable|string'
         ]);
 
@@ -54,6 +55,7 @@ class GroundStationController extends Controller
             'country' => 'required|string|max:255',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
+            'altitude' => 'nullable|numeric',
             'description' => 'nullable|string'
         ]);
 

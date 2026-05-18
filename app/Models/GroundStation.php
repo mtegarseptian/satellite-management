@@ -15,6 +15,7 @@ class GroundStation extends Model
         'country',
         'latitude',
         'longitude',
+        'altitude',
         'description'
     ];
 

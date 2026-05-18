@@ -10,9 +10,9 @@
 @endsection
 
 @section('content')
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Ground Station Information</h3>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white">
+            <h3 class="card-title font-weight-bold">Ground Station Information</h3>
         </div>
 
         <form action="{{ route('ground-stations.store') }}" method="POST">
@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="latitude">Latitude <span class="text-danger">*</span></label>
                             <input type="number" step="0.0000001" class="form-control @error('latitude') is-invalid @enderror" 
@@ -66,7 +66,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="longitude">Longitude <span class="text-danger">*</span></label>
                             <input type="number" step="0.0000001" class="form-control @error('longitude') is-invalid @enderror" 
@@ -78,9 +78,22 @@
                             <small class="form-text text-muted">Range: -180 to 180</small>
                         </div>
                     </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="altitude">Altitude <small class="text-muted">(km)</small></label>
+                            <input type="number" step="0.001" class="form-control @error('altitude') is-invalid @enderror" 
+                                   id="altitude" name="altitude" value="{{ old('altitude', $groundStation->altitude ?? '') }}" 
+                                   placeholder="e.g., 0.15">
+                            @error('altitude')
+                                <span class="invalid-feedback">{{ $message }}</span>
+                            @enderror
+                            <small class="form-text text-muted">Tinggi dpl (Kilometer)</small>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group mt-2">
                     <label for="description">Description</label>
                     <textarea class="form-control @error('description') is-invalid @enderror" 
                               id="description" name="description" rows="4">{{ old('description') }}</textarea>
@@ -90,13 +103,13 @@
                 </div>
             </div>
 
-            <div class="card-footer">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Save Ground Station
-                </button>
+            <div class="card-footer bg-white text-right">
                 <a href="{{ route('ground-stations.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Cancel
+                     Cancel
                 </a>
+                <button type="submit" class="btn btn-primary ml-2">
+                    <i class="fas fa-save mr-1"></i> Save Ground Station
+                </button>
             </div>
         </form>
     </div>
