@@ -47,7 +47,7 @@
                             <th class="text-muted">Altitude:</th>
                             <td>
                                 @if($groundStation->altitude)
-                                    {{ $groundStation->altitude }} <small>km</small>
+                                    {{ $groundStation->altitude }} <small>m</small>
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif

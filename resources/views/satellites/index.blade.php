@@ -69,7 +69,7 @@
                             <th>Name</th>
                             <th>Country</th>
                             <th>Orbit</th>
-                            <th>Launch Date</th>
+                            <th>Epoch</th> <th>Launch Date</th>
                             <th>Ground Station</th>
                             <th>Status</th>
                             <th width="15%">Actions</th>
@@ -84,6 +84,8 @@
                                 </td>
                                 <td>{{ $satellite->country }}</td>
                                 <td><span class="badge badge-info">{{ $satellite->orbit_type }}</span></td>
+                                
+                                <td><small class="text-muted">{{ $satellite->epoch }}</small></td>
                                 
                                 <td>{{ $satellite->launch_date->format('Y-m-d') }}</td>
                                 
@@ -126,7 +128,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center">No satellites found</td>
+                                <td colspan="9" class="text-center">No satellites found</td>
                             </tr>
                         @endforelse
                     </tbody>

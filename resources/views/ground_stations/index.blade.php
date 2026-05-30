@@ -47,7 +47,7 @@
                                     </small>
                                     <small class="d-block text-muted">
                                         <i class="fas fa-mountain text-secondary mr-1"></i> 
-                                        Alt: {{ $gs->altitude ? $gs->altitude . ' km' : '-' }}
+                                        Alt: {{ $gs->altitude ? $gs->altitude . ' m' : '-' }}
                                     </small>
                                 </td>
                                 <td>

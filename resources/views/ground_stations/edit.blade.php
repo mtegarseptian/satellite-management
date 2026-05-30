@@ -77,14 +77,21 @@
 
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label for="altitude">Altitude <small class="text-muted">(km)</small></label>
-                            <input type="number" step="0.001" class="form-control @error('altitude') is-invalid @enderror" 
-                                   id="altitude" name="altitude" value="{{ old('altitude', $groundStation->altitude ?? '') }}" 
-                                   placeholder="e.g., 0.15">
+                            <label for="altitude">Altitude <small class="text-muted">(m)</small></label>
+                            <div class="input-group">
+                                <input type="number" step="any" class="form-control @error('altitude') is-invalid @enderror" 
+                                       id="altitude" name="altitude" value="{{ old('altitude', $groundStation->altitude ?? '') }}" 
+                                       placeholder="e.g., 260">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-info" onclick="fetchAltitude()" title="Ambil elevasi otomatis">
+                                        <i class="fas fa-magic"></i> Auto
+                                    </button>
+                                </div>
+                            </div>
                             @error('altitude')
-                                <span class="invalid-feedback">{{ $message }}</span>
+                                <span class="invalid-feedback d-block">{{ $message }}</span>
                             @enderror
-                            <small class="form-text text-muted">Tinggi dpl (Kilometer)</small>
+                            <small class="form-text text-muted">Tinggi dpl (Meter). Klik "Auto" untuk isi via koordinat.</small>
                         </div>
                     </div>
                 </div>
@@ -110,3 +117,45 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    function fetchAltitude() {
+        let lat = document.getElementById('latitude').value;
+        let lng = document.getElementById('longitude').value;
+        let altInput = document.getElementById('altitude');
+
+        if (!lat || !lng) {
+            alert('Silakan isi Latitude dan Longitude terlebih dahulu!');
+            return;
+        }
+
+        let originalValue = altInput.value;
+        altInput.placeholder = 'Mencari...';
+        altInput.value = '';
+
+        let apiUrl = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response failed');
+                return response.json();
+            })
+            .then(data => {
+                if (data.elevation && data.elevation.length > 0) {
+                    let altitudeInMeters = data.elevation[0];
+                    // Langsung dimasukkan dalam satuan Meter (tanpa dibagi 1000)
+                    altInput.value = altitudeInMeters; 
+                } else {
+                    altInput.value = originalValue;
+                    alert('Altitude tidak ditemukan untuk koordinat tersebut.');
+                }
+            })
+            .catch(error => {
+                console.error('Error Fetching Altitude:', error);
+                altInput.value = originalValue;
+                alert('Gagal menghubungi server penyedia Elevasi.');
+            });
+    }
+</script>
+@endpush

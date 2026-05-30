@@ -39,10 +39,21 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
 
-        /* Scrollbar Filter */
-        .dropdown-menu-filter { max-height: 400px; overflow-y: auto; }
-        .dropdown-menu-filter::-webkit-scrollbar { width: 6px; }
-        .dropdown-menu-filter::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        /* Scrollbar Filter - Dibuat spesifik untuk list satelit */
+        .dropdown-menu-filter { padding: 15px; } 
+        
+        #satellite-checkboxes { 
+            max-height: 150px; /* Ukuran ini pas untuk menampilkan sekitar 4 baris satelit */
+            overflow-y: auto; 
+            overflow-x: hidden;
+            padding-right: 5px; /* Memberi jarak agar scrollbar tidak menempel ke teks */
+        }
+        
+        /* Mempercantik Scrollbar */
+        #satellite-checkboxes::-webkit-scrollbar { width: 6px; }
+        #satellite-checkboxes::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        #satellite-checkboxes::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        #satellite-checkboxes::-webkit-scrollbar-thumb:hover { background: #555; }
 
         /* Efek Hover untuk Kartu Satelit yang bisa diklik */
         .sat-card-clickable { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
@@ -120,7 +131,7 @@
 
     <script>
         let map; 
-        let trackers = {}; // Deklarasi global agar bisa diakses fungsi focusSatellite
+        let trackers = {}; 
 
         document.addEventListener('DOMContentLoaded', function () {
             
@@ -171,7 +182,6 @@
                     iconSize: [0, 0], iconAnchor: [0, 0]
                 });
 
-                // PERUBAHAN 4: Memastikan .addTo(map) dipasang agar marker dan garis langsung tergambar
                 trackers[sat.id] = {
                     marker: L.marker([0, 0], {icon: customIcon}).addTo(map), 
                     line: L.polyline([], {color: color, weight: 2, opacity: 0.6}).addTo(map),
@@ -263,7 +273,7 @@
             }
 
             updatePositions();
-            setInterval(updatePositions, 1000); 
+            setInterval(updatePositions, 3000); 
             setTimeout(() => map.invalidateSize(), 500);
         });
 
@@ -271,15 +281,13 @@
             if(map) { map.setView([0, 0], 1); }
         }
 
-        // FUNGSI BARU: Langsung menuju ke satelit saat kartu diklik
         function focusSatellite(id) {
             if (map && trackers[id]) {
                 let pos = trackers[id].marker.getLatLng();
-                // Hanya bergeser jika koordinatnya valid (bukan 0,0)
                 if (pos.lat !== 0 && pos.lng !== 0) {
                     map.flyTo(pos, 4, {
                         animate: true,
-                        duration: 1.5 // Animasi pergerakan peta 1.5 detik
+                        duration: 1.5
                     });
                 }
             }

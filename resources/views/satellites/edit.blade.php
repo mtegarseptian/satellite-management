@@ -40,7 +40,16 @@
                                 </div>
                             </div>
                             @error('norad_id') <span class="invalid-feedback">{{ $message }}</span> @enderror
-                            <small class="text-muted">Isi ID ini untuk update otomatis dari CelesTrak. Kosongkan jika menggunakan server lokal BRIN.</small>
+                            <small class="text-muted">Isi ID ini untuk update otomatis dari CelesTrak.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tle_url">Dynamic API URL <small class="text-muted">(Opsional)</small></label>
+                            <input type="url" class="form-control @error('tle_url') is-invalid @enderror" 
+                                   id="tle_url" name="tle_url" value="{{ old('tle_url', $satellite->tle_url) }}" 
+                                   placeholder="Contoh: http://10.35.0.104/tle/LAPANSAT.txt">
+                            @error('tle_url') <span class="invalid-feedback">{{ $message }}</span> @enderror
+                            <small class="text-muted">Isi jika satelit memiliki link TLE spesifik. (Prioritas tertinggi saat update).</small>
                         </div>
 
                         <div class="form-group">
