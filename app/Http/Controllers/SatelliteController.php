@@ -124,7 +124,9 @@ class SatelliteController extends Controller
     
     public function liveTracking()
     {
-        $satellites = Satellite::active()
+        // Tambahkan with('groundStation') agar relasinya ikut dikirim ke JavaScript
+        $satellites = Satellite::with('groundStation')
+            ->active()
             ->whereNotNull('tle_line1')
             ->whereNotNull('tle_line2')
             ->get();

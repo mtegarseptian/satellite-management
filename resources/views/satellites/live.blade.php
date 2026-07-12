@@ -11,58 +11,41 @@
 @push('styles')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Peta Layar Penuh dengan Background Luar Angkasa */
         #globalSatelliteMap { height: 65vh; width: 100%; z-index: 1; border-radius: 0 0 4px 4px; background: #0b101d; }
-
         .leaflet-container img { max-width: none !important; max-height: none !important; }
-
         .satellite-marker-wrapper {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transform: translate(-50%, -10px); 
         }
-
         .blinking-dot {
             width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff;
             animation: pulse-generic 1.5s infinite;
         }
-
         .satellite-label {
             margin-top: 6px; background-color: rgba(255, 255, 255, 0.9);
             padding: 2px 8px; border-radius: 4px; font-size: 11px;
             font-weight: bold; color: #333; border: 1px solid #ccc;
             white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-
         @keyframes pulse-generic {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 50px rgba(255, 255, 255, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
-
-        /* Scrollbar Filter - Dibuat spesifik untuk list satelit */
         .dropdown-menu-filter { padding: 15px; } 
-        
         #satellite-checkboxes { 
-            max-height: 150px; /* Ukuran ini pas untuk menampilkan sekitar 4 baris satelit */
-            overflow-y: auto; 
-            overflow-x: hidden;
-            padding-right: 5px; /* Memberi jarak agar scrollbar tidak menempel ke teks */
+            max-height: 150px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; 
         }
-        
-        /* Mempercantik Scrollbar */
         #satellite-checkboxes::-webkit-scrollbar { width: 6px; }
         #satellite-checkboxes::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         #satellite-checkboxes::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         #satellite-checkboxes::-webkit-scrollbar-thumb:hover { background: #555; }
-
-        /* Efek Hover untuk Kartu Satelit yang bisa diklik */
         .sat-card-clickable { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
         .sat-card-clickable:hover { transform: translateY(-4px); box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important; }
     </style>
 @endpush
 
 @section('content')
-
     <div class="row" id="stat-cards-container">
         @foreach($satellites as $sat)
         <div class="col-md-4 col-sm-6 stat-card-wrapper" id="wrapper-{{ $sat->id }}">
@@ -76,9 +59,19 @@
                         <div class="col-6 mb-1"><span class="text-muted">Alt:</span> <strong class="text-success" id="alt-{{ $sat->id }}">--</strong> <small>km</small></div>
                         <div class="col-6 mb-1"><span class="text-muted">Spd:</span> <strong class="text-primary" id="vel-{{ $sat->id }}">--.---</strong> <small>km/s</small></div>
                         
-                        <div class="col-12 mt-2 pt-2 border-top">
+                        <div class="col-12 my-1 border-top pt-2"></div>
+                        <div class="col-4 mb-1"><span class="text-muted" title="Azimuth">Azimuth:</span> <strong id="azi-{{ $sat->id }}">--</strong>&deg;</div>
+                        <div class="col-4 mb-1"><span class="text-muted" title="Elevation">Elevation:</span> <strong id="ele-{{ $sat->id }}">--</strong>&deg;</div>
+                        <div class="col-4 mb-1"><span class="text-muted" title="Range / Jarak">Range:</span> <strong class="text-info" id="rng-{{ $sat->id }}">--</strong> <small>km</small></div>
+
+                        <div class="col-12 mt-1 pt-2 border-top">
                             <span class="text-muted"><i class="far fa-clock mr-1"></i>Epoch:</span> 
                             <span id="epoch-{{ $sat->id }}" class="small font-weight-bold text-dark ml-1">Loading...</span>
+                        </div>
+                        
+                        <div class="col-12 mt-1">
+                            <span class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>Prediksi AOS:</span> 
+                            <span id="next-pass-{{ $sat->id }}" class="small font-weight-bold text-primary ml-1">Menghitung prediksi...</span>
                         </div>
                     </div>
                 </div>
@@ -185,6 +178,9 @@
                 trackers[sat.id] = {
                     marker: L.marker([0, 0], {icon: customIcon}).addTo(map), 
                     line: L.polyline([], {color: color, weight: 2, opacity: 0.6}).addTo(map),
+                    footprint: L.circle([0, 0], {
+                        color: color, weight: 1, fillColor: '#ffffff', fillOpacity: 0.15, dashArray: '5, 5'
+                    }).addTo(map),
                     satrec: satellite.twoline2satrec(sat.tle_line1, sat.tle_line2)
                 };
             });
@@ -193,10 +189,12 @@
                 if (isVisible) {
                     trackers[id].marker.addTo(map);
                     trackers[id].line.addTo(map);
+                    trackers[id].footprint.addTo(map);
                     document.getElementById('wrapper-' + id).style.display = 'block';
                 } else {
                     map.removeLayer(trackers[id].marker);
                     map.removeLayer(trackers[id].line);
+                    map.removeLayer(trackers[id].footprint);
                     document.getElementById('wrapper-' + id).style.display = 'none';
                 }
             }
@@ -242,7 +240,44 @@
                         document.getElementById(`alt-${sat.id}`).innerText = alt.toFixed(0);
                         document.getElementById(`vel-${sat.id}`).innerText = speed.toFixed(3);
 
+                        if (sat.ground_station) {
+                            const observerGd = {
+                                longitude: satellite.degreesToRadians(sat.ground_station.longitude),
+                                latitude: satellite.degreesToRadians(sat.ground_station.latitude),
+                                height: sat.ground_station.altitude / 1000 
+                            };
+                            
+                            const positionEcf = satellite.eciToEcf(positionAndVelocity.position, gmst);
+                            const lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf);
+
+                            const azimuth = satellite.radiansToDegrees(lookAngles.azimuth);
+                            const elevation = satellite.radiansToDegrees(lookAngles.elevation);
+                            const rangeSat = lookAngles.rangeSat;
+
+                            document.getElementById(`azi-${sat.id}`).innerText = azimuth.toFixed(1);
+                            document.getElementById(`ele-${sat.id}`).innerText = elevation.toFixed(1);
+                            document.getElementById(`rng-${sat.id}`).innerText = rangeSat.toFixed(0);
+
+                            const eleElement = document.getElementById(`ele-${sat.id}`);
+                            if (elevation < 0) {
+                                eleElement.classList.add('text-danger');
+                                eleElement.classList.remove('text-success');
+                            } else {
+                                eleElement.classList.add('text-success');
+                                eleElement.classList.remove('text-danger');
+                            }
+                        } else {
+                            document.getElementById(`azi-${sat.id}`).innerText = "N/A";
+                            document.getElementById(`ele-${sat.id}`).innerText = "N/A";
+                            document.getElementById(`rng-${sat.id}`).innerText = "N/A";
+                        }
+
                         trackers[sat.id].marker.setLatLng([lat, lng]);
+
+                        const earthRadius = 6371; 
+                        let footprintRadiusKm = Math.acos(earthRadius / (earthRadius + alt)) * earthRadius;
+                        trackers[sat.id].footprint.setLatLng([lat, lng]);
+                        trackers[sat.id].footprint.setRadius(footprintRadiusKm * 1000);
 
                         let pathSegments = [];
                         let currentSegment = [];
@@ -257,7 +292,7 @@
                                 let pLat = satellite.degreesLat(calcGd.latitude);
                                 let pLng = satellite.degreesLong(calcGd.longitude);
 
-                                if (lastLng !== null && Math.abs(pLng - lastLng) > 180) {
+                                if (lastLng !== null && Math.abs(pLng - lastLng) > 90) {
                                     pathSegments.push(currentSegment);
                                     currentSegment = [];
                                 }
@@ -271,6 +306,73 @@
                     }
                 });
             }
+
+            // --- BARU: FUNGSI PASS PREDICTION (AOS) ---
+            function calculateNextPasses() {
+                const now = new Date();
+                
+                satellites.forEach(sat => {
+                    if (!sat.ground_station) {
+                        document.getElementById(`next-pass-${sat.id}`).innerText = "N/A (Pilih Ground Station)";
+                        document.getElementById(`next-pass-${sat.id}`).className = "small font-weight-bold text-muted ml-1";
+                        return;
+                    }
+
+                    const satrec = trackers[sat.id].satrec;
+                    const observerGd = {
+                        longitude: satellite.degreesToRadians(sat.ground_station.longitude),
+                        latitude: satellite.degreesToRadians(sat.ground_station.latitude),
+                        height: sat.ground_station.altitude / 1000 
+                    };
+
+                    let nextPassTime = null;
+                    let isCurrentlyPassing = false;
+
+                    const currentPos = satellite.propagate(satrec, now);
+                    if (currentPos.position) {
+                        const currentEcf = satellite.eciToEcf(currentPos.position, satellite.gstime(now));
+                        const currentLook = satellite.ecfToLookAngles(observerGd, currentEcf);
+                        if (currentLook.elevation > 0) {
+                            isCurrentlyPassing = true;
+                        }
+                    }
+
+                    if (isCurrentlyPassing) {
+                         document.getElementById(`next-pass-${sat.id}`).innerText = "Dalam Jangkauan Sinyal!";
+                         document.getElementById(`next-pass-${sat.id}`).className = "small font-weight-bold text-success ml-1";
+                         return;
+                    }
+
+                    // Loop simulasi 24 jam ke depan (Lompat setiap 1 menit)
+                    for (let i = 1; i <= 1440; i++) {
+                        let futureTime = new Date(now.getTime() + i * 60000);
+                        let futurePos = satellite.propagate(satrec, futureTime);
+                        
+                        if (futurePos.position) {
+                            let futureEcf = satellite.eciToEcf(futurePos.position, satellite.gstime(futureTime));
+                            let futureLook = satellite.ecfToLookAngles(observerGd, futureEcf);
+                            
+                            if (futureLook.elevation > 0) {
+                                nextPassTime = futureTime;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (nextPassTime) {
+                        const timeString = nextPassTime.toLocaleString('id-ID', { 
+                            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
+                        });
+                        document.getElementById(`next-pass-${sat.id}`).innerText = timeString + " WIB";
+                    } else {
+                        document.getElementById(`next-pass-${sat.id}`).innerText = "Tidak melintas 24 jam ke depan";
+                        document.getElementById(`next-pass-${sat.id}`).className = "small font-weight-bold text-danger ml-1";
+                    }
+                });
+            }
+
+            // Jalankan prediksi pass prediction sekali di awal
+            calculateNextPasses();
 
             updatePositions();
             setInterval(updatePositions, 3000); 
