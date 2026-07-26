@@ -17,21 +17,41 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transform: translate(-50%, -10px); 
         }
+        
+        /* Satelit tetap menonjol (14px) */
         .blinking-dot {
-            width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff;
+            width: 14px; 
+            height: 14px; 
+            border-radius: 50%; border: 2px solid #ffffff;
             animation: pulse-generic 1.5s infinite;
         }
+        
         .satellite-label {
-            margin-top: 6px; background-color: rgba(255, 255, 255, 0.9);
-            padding: 2px 8px; border-radius: 4px; font-size: 11px;
+            margin-top: 6px; 
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            font-size: 11px; 
             font-weight: bold; color: #333; border: 1px solid #ccc;
             white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
+        
         @keyframes pulse-generic {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 50px rgba(255, 255, 255, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
+        
+        /* Ikon Ground Station diperkecil lagi menjadi 14px */
+        .gs-custom-icon {
+            display: flex; justify-content: center; align-items: center;
+            background-color: rgba(255,255,255,0.9);
+            border-radius: 50%; border: 2px solid;
+            box-shadow: 0 0 3px rgba(0,0,0,0.4);
+            width: 14px; 
+            height: 14px; 
+        }
+
         .dropdown-menu-filter { padding: 15px; } 
         #satellite-checkboxes { 
             max-height: 150px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; 
@@ -51,9 +71,14 @@
         <div class="col-md-4 col-sm-6 stat-card-wrapper" id="wrapper-{{ $sat->id }}">
             <div class="card shadow-sm border-0 mb-3 sat-card-clickable" id="card-{{ $sat->id }}" style="border-top: 4px solid #333;" onclick="focusSatellite({{ $sat->id }})" title="Klik untuk mencari satelit di peta">
                 <div class="card-body p-3">
-                    <h6 class="font-weight-bold mb-2"><i class="fas fa-satellite mr-1"></i> {{ $sat->name }}</h6>
+                    <h6 class="font-weight-bold mb-1"><i class="fas fa-satellite mr-1"></i> {{ $sat->name }}</h6>
                     
-                    <div class="row text-sm">
+                    <div class="text-muted small mb-2" style="font-size: 0.8rem;">
+                        <i class="fas fa-broadcast-tower mr-1"></i> GS: 
+                        <strong class="text-dark">{{ $sat->groundStation ? $sat->groundStation->name : 'Belum Terhubung' }}</strong>
+                    </div>
+                    
+                    <div class="row text-sm mt-1">
                         <div class="col-6 mb-1"><span class="text-muted">Lat:</span> <strong id="lat-{{ $sat->id }}">--.----</strong></div>
                         <div class="col-6 mb-1"><span class="text-muted">Lng:</span> <strong id="lng-{{ $sat->id }}">--.----</strong></div>
                         <div class="col-6 mb-1"><span class="text-muted">Alt:</span> <strong class="text-success" id="alt-{{ $sat->id }}">--</strong> <small>km</small></div>
@@ -159,6 +184,15 @@
                 }
             }
 
+            let gsSatellitesMap = {};
+            satellites.forEach(s => {
+                if (s.ground_station) {
+                    let gsId = s.ground_station.id;
+                    if (!gsSatellitesMap[gsId]) gsSatellitesMap[gsId] = [];
+                    gsSatellitesMap[gsId].push(s.name);
+                }
+            });
+
             satellites.forEach((sat, index) => {
                 let color = colors[index % colors.length];
                 document.getElementById('card-' + sat.id).style.borderTopColor = color;
@@ -175,14 +209,72 @@
                     iconSize: [0, 0], iconAnchor: [0, 0]
                 });
 
+                let satPopupContent = `
+                    <div style="min-width: 160px; font-family: Arial, sans-serif;">
+                        <h6 class="mb-2 pb-2 border-bottom text-dark font-weight-bold" style="font-size: 14px;">
+                            <i class="fas fa-satellite" style="color: ${color};"></i> ${sat.name}
+                        </h6>
+                        <div class="text-dark" style="font-size: 12px; line-height: 1.5;">
+                            <span class="text-muted">Stasiun Pengendali (GS):</span><br>
+                            <span class="font-weight-bold text-primary">${sat.ground_station ? sat.ground_station.name : 'Belum Terhubung'}</span>
+                        </div>
+                    </div>
+                `;
+
                 trackers[sat.id] = {
-                    marker: L.marker([0, 0], {icon: customIcon}).addTo(map), 
+                    // SETTING LAYER: zIndexOffset: 1000 agar satelit selalu di paling atas
+                    marker: L.marker([0, 0], {icon: customIcon, zIndexOffset: 1000}).bindPopup(satPopupContent).addTo(map), 
                     line: L.polyline([], {color: color, weight: 2, opacity: 0.6}).addTo(map),
                     footprint: L.circle([0, 0], {
                         color: color, weight: 1, fillColor: '#ffffff', fillOpacity: 0.15, dashArray: '5, 5'
                     }).addTo(map),
                     satrec: satellite.twoline2satrec(sat.tle_line1, sat.tle_line2)
                 };
+
+                if (sat.ground_station) {
+                    let gsIcon = L.divIcon({
+                        className: 'custom-icon',
+                        html: `
+                            <div class="satellite-marker-wrapper">
+                                <div class="gs-custom-icon" style="border-color: ${color};">
+                                    <i class="fas fa-satellite-dish" style="color: ${color}; font-size: 8px;"></i>
+                                </div>
+                                <div class="satellite-label" style="border-bottom: 2px solid ${color}; font-size: 8px;">
+                                    GS: ${sat.ground_station.name}
+                                </div>
+                            </div>
+                        `,
+                        iconSize: [0, 0],
+                        iconAnchor: [0, 0]
+                    });
+                    
+                    let trackedSatsList = gsSatellitesMap[sat.ground_station.id]
+                        .map(name => `<i class="fas fa-check-circle text-success mr-1"></i> ${name}`)
+                        .join('<br>');
+
+                    let gsPopupContent = `
+                        <div style="min-width: 170px; font-family: Arial, sans-serif;">
+                            <h6 class="mb-2 pb-2 border-bottom text-dark font-weight-bold" style="font-size: 13px;">
+                                <i class="fas fa-broadcast-tower text-secondary"></i> GS: ${sat.ground_station.name}
+                            </h6>
+                            <div class="text-dark" style="font-size: 12px; line-height: 1.6;">
+                                <span class="text-muted border-bottom d-inline-block mb-1">Daftar Satelit Terlacak:</span><br>
+                                <span class="font-weight-bold">${trackedSatsList}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    // SETTING LAYER: zIndexOffset: -1000 agar GS selalu di lapisan bawah
+                    trackers[sat.id].gsMarker = L.marker([sat.ground_station.latitude, sat.ground_station.longitude], {
+                        icon: gsIcon, 
+                        title: sat.ground_station.name,
+                        zIndexOffset: -1000
+                    }).bindPopup(gsPopupContent).addTo(map);
+
+                    trackers[sat.id].losLine = L.polyline([], {
+                        color: color, weight: 1.5, dashArray: '5, 5', opacity: 0.8
+                    }).addTo(map);
+                }
             });
 
             function toggleSatellite(id, isVisible) {
@@ -190,11 +282,15 @@
                     trackers[id].marker.addTo(map);
                     trackers[id].line.addTo(map);
                     trackers[id].footprint.addTo(map);
+                    if(trackers[id].gsMarker) trackers[id].gsMarker.addTo(map);
+                    if(trackers[id].losLine) trackers[id].losLine.addTo(map);
                     document.getElementById('wrapper-' + id).style.display = 'block';
                 } else {
                     map.removeLayer(trackers[id].marker);
                     map.removeLayer(trackers[id].line);
                     map.removeLayer(trackers[id].footprint);
+                    if(trackers[id].gsMarker) map.removeLayer(trackers[id].gsMarker);
+                    if(trackers[id].losLine) map.removeLayer(trackers[id].losLine);
                     document.getElementById('wrapper-' + id).style.display = 'none';
                 }
             }
@@ -262,9 +358,16 @@
                             if (elevation < 0) {
                                 eleElement.classList.add('text-danger');
                                 eleElement.classList.remove('text-success');
+                                
+                                trackers[sat.id].losLine.setLatLngs([]);
                             } else {
                                 eleElement.classList.add('text-success');
                                 eleElement.classList.remove('text-danger');
+                                
+                                trackers[sat.id].losLine.setLatLngs([
+                                    [sat.ground_station.latitude, sat.ground_station.longitude],
+                                    [lat, lng]
+                                ]);
                             }
                         } else {
                             document.getElementById(`azi-${sat.id}`).innerText = "N/A";
@@ -307,7 +410,6 @@
                 });
             }
 
-            // --- BARU: FUNGSI PASS PREDICTION (AOS) ---
             function calculateNextPasses() {
                 const now = new Date();
                 
@@ -338,12 +440,11 @@
                     }
 
                     if (isCurrentlyPassing) {
-                         document.getElementById(`next-pass-${sat.id}`).innerText = "Dalam Jangkauan Sinyal!";
+                         document.getElementById(`next-pass-${sat.id}`).innerText = "Sinyal Terakuisisi (AOS)!";
                          document.getElementById(`next-pass-${sat.id}`).className = "small font-weight-bold text-success ml-1";
                          return;
                     }
 
-                    // Loop simulasi 24 jam ke depan (Lompat setiap 1 menit)
                     for (let i = 1; i <= 1440; i++) {
                         let futureTime = new Date(now.getTime() + i * 60000);
                         let futurePos = satellite.propagate(satrec, futureTime);
@@ -371,7 +472,6 @@
                 });
             }
 
-            // Jalankan prediksi pass prediction sekali di awal
             calculateNextPasses();
 
             updatePositions();
